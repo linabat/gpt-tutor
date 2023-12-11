@@ -5,7 +5,6 @@ from flask_cors import CORS
 import openai
 from dotenv import load_dotenv
 load_dotenv()  
-from gptBackend import agent_executor
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -16,6 +15,26 @@ app.logger.setLevel(logging.DEBUG)
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
+# api.py
+import json
+
+@app.route('/api/savePreferences', methods=['POST'])
+def save_preferences():
+    data = request.get_json()
+    learning_prefs = data['learningPreferences']
+    app.logger.debug("Learning preferences received: %s", learning_prefs)
+
+    # Write preferences to a file
+    try:
+        with open('learning_preferences.json', 'w') as file:
+            json.dump(learning_prefs, file)
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        app.logger.error('Error in save_preferences: %s', str(e))
+        return jsonify({'error': str(e)}), 500
+
+
+from gptBackend import agent_executor
 @app.route('/get-response', methods=['POST', 'OPTIONS'])
 def get_response():
     if request.method == 'OPTIONS':
@@ -42,24 +61,6 @@ def _build_cors_preflight_response():
 def internal_error(error):
     app.logger.error('Server Error: %s', str(error))
     return "500 error"
-
-# api.py
-import json
-
-@app.route('/api/savePreferences', methods=['POST'])
-def save_preferences():
-    data = request.get_json()
-    learning_prefs = data['learningPreferences']
-    app.logger.debug("Learning preferences received: %s", learning_prefs)
-
-    # Write preferences to a file
-    try:
-        with open('learning_preferences.json', 'w') as file:
-            json.dump(learning_prefs, file)
-        return jsonify({'status': 'success'})
-    except Exception as e:
-        app.logger.error('Error in save_preferences: %s', str(e))
-        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
